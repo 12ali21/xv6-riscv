@@ -1,3 +1,5 @@
+#include "kernel/child.h"
+#include "kernel/report.h"
 struct stat;
 
 // system calls
@@ -22,6 +24,8 @@ int getpid(void);
 char* sbrk(int);
 int sleep(int);
 int uptime(void);
+int childproc(struct child_processes*);
+int rptraps(struct report_traps*);
 
 // ulib.c
 int stat(const char*, struct stat*);

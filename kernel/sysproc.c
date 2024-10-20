@@ -5,6 +5,8 @@
 #include "memlayout.h"
 #include "spinlock.h"
 #include "proc.h"
+#include "child.h"
+#include "report.h"
 
 uint64
 sys_exit(void)
@@ -90,4 +92,30 @@ sys_uptime(void)
   xticks = ticks;
   release(&tickslock);
   return xticks;
+}
+
+uint64
+sys_childproc(void) 
+{
+  uint64 staddr;
+  argaddr(0, &staddr);
+
+  struct child_processes children;
+  int res = child_processes(&children);
+
+  copyout(myproc()->pagetable, staddr, (char *)&children, sizeof(children));
+  return res;
+}
+
+uint64
+sys_rptraps(void)
+{
+  uint64 staddr;
+  argaddr(0, &staddr);
+
+  struct report_traps rp_traps;
+  int res = report_traps(&rp_traps);
+
+  copyout(myproc()->pagetable, staddr, (char *)&rp_traps, sizeof(rp_traps));
+  return res;
 }

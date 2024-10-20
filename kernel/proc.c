@@ -5,6 +5,8 @@
 #include "spinlock.h"
 #include "proc.h"
 #include "defs.h"
+#include "child.h"
+#include "report.h"
 
 struct cpu cpus[NCPU];
 
@@ -692,4 +694,119 @@ procdump(void)
     printf("%d %s %s", p->pid, state, p->name);
     printf("\n");
   }
+}
+
+
+char* get_state(enum procstate s)
+{
+  switch (s)
+  {
+  case UNUSED:
+    return "unused";
+  case USED:
+    return "used";
+  case SLEEPING:
+    return "sleep";
+  case RUNNABLE:
+    return "running";
+  case RUNNING:
+    return "running";
+  case ZOMBIE:
+    return "zombie";
+  default:
+    return "unknown";
+  }
+}
+
+int child_processes(struct child_processes *children)
+{
+  int ppid = myproc()->pid;
+
+  struct proc_info *infos = children->processes;
+  int n = 0;
+
+  for (struct proc *p = proc; p < &proc[NPROC]; p++)
+  {
+    acquire(&p->lock);
+
+    struct proc *parent = p->parent;
+    while (parent && parent->state != UNUSED)
+    {
+      if (parent->pid == ppid)
+      {
+        safestrcpy(infos[n].name, p->name, sizeof(infos[n].name));
+        safestrcpy(infos[n].state, get_state(p->state), sizeof(infos[n].state));
+        infos[n].pid = p->pid;
+        infos[n].ppid = p->parent->pid;
+      
+        n++;
+        break;
+      }
+      parent = parent->parent;
+    }
+    release(&p->lock);
+  }
+
+  children->count = n;
+  return 0;
+}
+
+struct {
+    struct report reports[MAX_REPORT_BUFFER_SIZE];
+    int numberOfReports;
+    int writeIndex;
+} __internal_report_list;
+
+void add_trap_report(int pid, char* name, uint64 scause, uint64 spec, uint64 stval) {
+  struct report rp;
+  rp.pid = pid;
+  safestrcpy(rp.pname, name, sizeof(rp.pname));
+  rp.scause = scause;
+  rp.sepc = spec;
+  rp.stval = stval;
+
+  __internal_report_list.reports[__internal_report_list.writeIndex++] = rp; 
+  if (__internal_report_list.writeIndex >= MAX_REPORT_BUFFER_SIZE) { // loop write index
+    __internal_report_list.writeIndex = 0;
+  }
+
+  // increase number of reports
+  if (__internal_report_list.numberOfReports > MAX_REPORT_BUFFER_SIZE) {
+    __internal_report_list.numberOfReports = MAX_REPORT_BUFFER_SIZE;
+  } else {
+    __internal_report_list.numberOfReports++;
+  }
+}
+
+int report_traps(struct report_traps* rp_traps) 
+{
+  // get all the children of the current process
+  struct child_processes children;
+  child_processes(&children);
+
+  int ppid = myproc()->pid;
+  int index = 0;
+  int do_report = 0;
+  for (int i = 0; i < __internal_report_list.numberOfReports; i++)
+  {
+    do_report = 0;
+    // check process
+    if (__internal_report_list.reports[i].pid == ppid) {
+      do_report = 1;
+    } else { // check process children
+      for (int j = 0; j < children.count; j++)
+      {
+        if (__internal_report_list.reports[i].pid == children.processes[i].pid) {
+          do_report = 1;
+          break;
+        }
+      }
+    }
+    if (do_report) {
+      rp_traps->reports[index++] = __internal_report_list.reports[i];
+    }
+  }
+  rp_traps->count = index;
+  
+  return 0;
 }

@@ -8,6 +8,10 @@ struct spinlock;
 struct sleeplock;
 struct stat;
 struct superblock;
+struct proc_info;
+struct child_processes;
+struct report_traps;
+enum procstate;
 
 // bio.c
 void            binit(void);
@@ -106,6 +110,9 @@ void            yield(void);
 int             either_copyout(int user_dst, uint64 dst, void *src, uint64 len);
 int             either_copyin(void *dst, int user_src, uint64 src, uint64 len);
 void            procdump(void);
+int             child_processes(struct child_processes*);
+int             report_traps(struct report_traps*);
+void            add_trap_report(int pid, char* name, uint64 scause, uint64 spec, uint64 stval);
 
 // swtch.S
 void            swtch(struct context*, struct context*);
