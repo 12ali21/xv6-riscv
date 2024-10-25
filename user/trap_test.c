@@ -5,10 +5,19 @@
 int main(int argc, char const *argv[])
 {
     if (fork() == 0) {
+        // modify null address
         int* p = (int *)0;
         *p = 1;
         exit(0);
     }
+    if (fork() == 0) {
+        // read from outside page table
+        int *invalid_address = (int *)0xFFFFFFFF;
+        int value = *invalid_address;
+        printf("%d\n", value);
+        exit(0);
+    }
+
     sleep(5);
 
     struct report_traps rp_traps;

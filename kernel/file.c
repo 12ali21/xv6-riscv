@@ -104,7 +104,7 @@ filestat(struct file *f, uint64 addr)
 // Read from file f.
 // addr is a user virtual address.
 int
-fileread(struct file *f, uint64 addr, int n)
+fileread(struct file *f, uint64 addr, int n, int space)
 {
   int r = 0;
 
@@ -119,7 +119,7 @@ fileread(struct file *f, uint64 addr, int n)
     r = devsw[f->major].read(1, addr, n);
   } else if(f->type == FD_INODE){
     ilock(f->ip);
-    if((r = readi(f->ip, 1, addr, f->off, n)) > 0)
+    if((r = readi(f->ip, space, addr, f->off, n)) > 0)
       f->off += r;
     iunlock(f->ip);
   } else {
@@ -132,7 +132,7 @@ fileread(struct file *f, uint64 addr, int n)
 // Write to file f.
 // addr is a user virtual address.
 int
-filewrite(struct file *f, uint64 addr, int n)
+filewrite(struct file *f, uint64 addr, int n, int space)
 {
   int r, ret = 0;
 
@@ -161,7 +161,7 @@ filewrite(struct file *f, uint64 addr, int n)
 
       begin_op();
       ilock(f->ip);
-      if ((r = writei(f->ip, 1, addr + i, f->off, n1)) > 0)
+      if ((r = writei(f->ip, space, addr + i, f->off, n1)) > 0)
         f->off += r;
       iunlock(f->ip);
       end_op();

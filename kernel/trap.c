@@ -68,10 +68,15 @@ usertrap(void)
   } else if((which_dev = devintr()) != 0){
     // ok
   } else {
-    add_trap_report(p->pid, p->name, r_scause(), r_sepc(), r_stval());
+    
+    uint64 scause = r_scause();
+    uint64 sepc = r_sepc();
+    uint64 stval = r_stval();
 
-    printf("usertrap(): unexpected scause 0x%lx pid=%d\n", r_scause(), p->pid);
-    printf("            sepc=0x%lx stval=0x%lx\n", r_sepc(), r_stval());
+    add_trap_report(p->pid, p->name, scause, sepc, stval);
+
+    printf("usertrap(): unexpected scause 0x%lx pid=%d\n", scause, p->pid);
+    printf("            sepc=0x%lx stval=0x%lx\n", sepc, stval);
     setkilled(p);
   }
 

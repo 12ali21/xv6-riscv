@@ -7,6 +7,12 @@
 #include "defs.h"
 #include "child.h"
 #include "report.h"
+#include "fs.h"
+#include "sleeplock.h"
+#include "stat.h"
+#include "file.h"
+
+#define REPORTS_LOAD_SIZE 5
 
 struct cpu cpus[NCPU];
 
@@ -757,15 +763,8 @@ struct {
     int writeIndex;
 } __internal_report_list;
 
-void add_trap_report(int pid, char* name, uint64 scause, uint64 spec, uint64 stval) {
-  struct report rp;
-  rp.pid = pid;
-  safestrcpy(rp.pname, name, sizeof(rp.pname));
-  rp.scause = scause;
-  rp.sepc = spec;
-  rp.stval = stval;
-
-  __internal_report_list.reports[__internal_report_list.writeIndex++] = rp; 
+struct report *new_report() {
+  struct report *new_rp = &__internal_report_list.reports[__internal_report_list.writeIndex++];
   if (__internal_report_list.writeIndex >= MAX_REPORT_BUFFER_SIZE) { // loop write index
     __internal_report_list.writeIndex = 0;
   }
@@ -776,10 +775,109 @@ void add_trap_report(int pid, char* name, uint64 scause, uint64 spec, uint64 stv
   } else {
     __internal_report_list.numberOfReports++;
   }
+  return new_rp;
 }
+
+struct file *rp_f;
+
+struct file* kernel_create_file(char *path) {
+  struct inode *ip;
+  struct file *f;
+
+  // alloc an inode
+  begin_op();
+  ip = create(path, T_FILE, 0, 0);
+  end_op();
+  
+  if (ip == 0) {
+    return 0;
+  }
+  iunlock(ip);
+
+  // alloc a file structure
+  if ((f = filealloc()) == 0) {
+    iput(ip);
+    return 0;
+  }
+
+
+  // init the file structure
+  f->type = FD_INODE;
+  f->ip = ip;
+  f->off = f->ip->size; // to be able to append to the end of file
+  f->readable = 1;
+  f->writable = 1;
+
+  return f;
+}
+
+void write_reports_file(struct report *rp) {
+  // open file if first time adding report or the reports file is deleted
+  if (!rp_f || rp_f->ip->nlink < 1) {
+    rp_f = kernel_create_file("/reports.log");
+    if (!rp_f) {
+      panic("reports log");
+    }
+  }
+  
+  filewrite(rp_f, (uint64)rp, sizeof(*rp), 0);
+}
+
+int reports_loaded = 0;
+
+int load_reports(int n) {
+  if (reports_loaded)
+    return 1;
+  reports_loaded = 1;
+
+  // open file if first time
+  if (!rp_f) {
+    rp_f = kernel_create_file("/reports.log");
+    if (!rp_f) {
+      panic("create reports log");
+    }
+  }
+  
+  // check n
+  if (rp_f->ip->size < n * sizeof(struct report)) {
+    n = rp_f->ip->size / sizeof(struct report);
+    rp_f->off = 0;
+  } else {
+    rp_f->off -= n * sizeof(struct report);
+  }
+
+  // read n reports
+  for (int i = 0; i < n; i++)
+  {
+    struct report *buf_rp = new_report();
+    fileread(rp_f, (uint64)buf_rp, sizeof(struct report), 0);
+  }
+  rp_f->off = rp_f->ip->size;
+  return 0;
+}
+
+
+void add_trap_report(int pid, char* name, uint64 scause, uint64 spec, uint64 stval) {
+  load_reports(REPORTS_LOAD_SIZE);
+
+  struct report *rp = new_report();
+
+  rp->pid = pid;
+  safestrcpy(rp->pname, name, sizeof(rp->pname));
+  rp->scause = scause;
+  rp->sepc = spec;
+  rp->stval = stval;
+
+
+  // log report into file
+  write_reports_file(rp);
+}
+
 
 int report_traps(struct report_traps* rp_traps) 
 {
+  load_reports(REPORTS_LOAD_SIZE);
+
   // get all the children of the current process
   struct child_processes children;
   child_processes(&children);
@@ -787,21 +885,25 @@ int report_traps(struct report_traps* rp_traps)
   int ppid = myproc()->pid;
   int index = 0;
   int do_report = 0;
+  struct report *rp;
+
   for (int i = 0; i < __internal_report_list.numberOfReports; i++)
   {
+    rp = &__internal_report_list.reports[i];
     do_report = 0;
     // check process
-    if (__internal_report_list.reports[i].pid == ppid) {
+    if (rp->pid == ppid) {
       do_report = 1;
     } else { // check process children
       for (int j = 0; j < children.count; j++)
       {
-        if (__internal_report_list.reports[i].pid == children.processes[i].pid) {
+        if (rp->pid == children.processes[j].pid) {
           do_report = 1;
           break;
         }
       }
     }
+
     if (do_report) {
       rp_traps->reports[index++] = __internal_report_list.reports[i];
     }

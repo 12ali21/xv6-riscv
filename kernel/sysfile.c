@@ -76,7 +76,7 @@ sys_read(void)
   argint(2, &n);
   if(argfd(0, 0, &f) < 0)
     return -1;
-  return fileread(f, p, n);
+  return fileread(f, p, n, 1);
 }
 
 uint64
@@ -91,7 +91,7 @@ sys_write(void)
   if(argfd(0, 0, &f) < 0)
     return -1;
 
-  return filewrite(f, p, n);
+  return filewrite(f, p, n, 1);
 }
 
 uint64
@@ -242,7 +242,7 @@ bad:
   return -1;
 }
 
-static struct inode*
+struct inode*
 create(char *path, short type, short major, short minor)
 {
   struct inode *ip, *dp;

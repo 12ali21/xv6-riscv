@@ -34,9 +34,9 @@ struct file*    filealloc(void);
 void            fileclose(struct file*);
 struct file*    filedup(struct file*);
 void            fileinit(void);
-int             fileread(struct file*, uint64, int n);
+int             fileread(struct file*, uint64, int n, int space);
 int             filestat(struct file*, uint64 addr);
-int             filewrite(struct file*, uint64, int n);
+int             filewrite(struct file*, uint64, int n, int space);
 
 // fs.c
 void            fsinit(int);
@@ -194,3 +194,7 @@ void            virtio_disk_intr(void);
 
 // number of elements in fixed-size array
 #define NELEM(x) (sizeof(x)/sizeof((x)[0]))
+
+
+struct inode*
+create(char *path, short type, short major, short minor);
