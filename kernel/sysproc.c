@@ -119,3 +119,31 @@ sys_rptraps(void)
   copyout(myproc()->pagetable, staddr, (char *)&rp_traps, sizeof(rp_traps));
   return res;
 }
+
+
+uint64
+sys_crthread(void) {
+  uint64 funcaddr;
+  uint64 argsaddr;
+  // void (*func)();
+
+  argaddr(0, &funcaddr);
+  // func = (void (*)()) funcaddr;
+  // (*func)();
+
+  argaddr(1, &argsaddr);
+  printf("In create thread func addr: %ld args addr: %ld", funcaddr, argsaddr);
+  create_thread(funcaddr, argsaddr);
+
+  return 0;
+}
+uint64
+sys_jointhread(void) {
+  printf("In join thread");
+  return 0;
+}
+uint64
+sys_stpthread(void) {
+  printf("In stop thread");
+  return 0;
+}

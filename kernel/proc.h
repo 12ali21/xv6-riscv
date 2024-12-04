@@ -1,3 +1,5 @@
+#define MAX_THREAD 4
+
 // Saved registers for kernel context switches.
 struct context {
   uint64 ra;
@@ -79,6 +81,21 @@ struct trapframe {
   /* 280 */ uint64 t6;
 };
 
+
+enum threadstate {
+  THREAD_FREE,
+  THREAD_RUNNABLE,
+  THREAD_RUNNING,
+  THREAD_JOINED
+};
+
+struct thread {
+  enum threadstate state;
+  struct trapframe *trapframe;
+  uint id;
+  uint join;
+};
+
 enum procstate { UNUSED, USED, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
 
 // Per-process state
@@ -91,6 +108,10 @@ struct proc {
   int killed;                  // If non-zero, have been killed
   int xstate;                  // Exit status to be returned to parent's wait
   int pid;                     // Process ID
+
+  int last_thread_i;
+  struct thread threads[MAX_THREAD];
+  struct thread *current_thread;
 
   // wait_lock must be held when using this:
   struct proc *parent;         // Parent process

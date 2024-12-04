@@ -113,6 +113,7 @@ void            procdump(void);
 int             child_processes(struct child_processes*);
 int             report_traps(struct report_traps*);
 void            add_trap_report(int pid, char* name, uint64 scause, uint64 spec, uint64 stval);
+int             create_thread(uint64 func, uint64 args);
 
 // swtch.S
 void            swtch(struct context*, struct context*);

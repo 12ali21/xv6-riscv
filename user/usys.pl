@@ -38,3 +38,6 @@ entry("sleep");
 entry("uptime");
 entry("childproc");
 entry("rptraps");
+entry("crthread");
+entry("jointhread");
+entry("stpthread");

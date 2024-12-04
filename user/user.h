@@ -26,6 +26,9 @@ int sleep(int);
 int uptime(void);
 int childproc(struct child_processes*);
 int rptraps(struct report_traps*);
+int crthread(void*, void*);
+int jointhread(int);
+int stpthread(int);
 
 // ulib.c
 int stat(const char*, struct stat*);

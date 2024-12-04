@@ -62,6 +62,8 @@ procinit(void)
   for(p = proc; p < &proc[NPROC]; p++) {
       initlock(&p->lock, "proc");
       p->state = UNUSED;
+      p->last_thread_i = 0;
+      p->current_thread = 0;
       p->kstack = KSTACK((int) (p - proc));
   }
 }
@@ -442,6 +444,25 @@ wait(uint64 addr)
   }
 }
 
+
+void
+trapframe_to_context(struct context *ctx, struct trapframe *tf) {
+  ctx->ra = tf->epc;
+  ctx->sp = tf->sp;
+  ctx->s0 = tf->s0;
+  ctx->s1 = tf->s1;
+  ctx->s2 = tf->s2;
+  ctx->s3 = tf->s3;
+  ctx->s4 = tf->s4;
+  ctx->s5 = tf->s5;
+  ctx->s6 = tf->s6;
+  ctx->s7 = tf->s7;
+  ctx->s8 = tf->s8;
+  ctx->s9 = tf->s9;
+  ctx->s10 = tf->s10;
+  ctx->s11 = tf->s11;
+}
+
 // Per-CPU process scheduler.
 // Each CPU calls scheduler() after setting itself up.
 // Scheduler never returns.  It loops, doing:
@@ -471,6 +492,20 @@ scheduler(void)
         // before jumping back to us.
         p->state = RUNNING;
         c->proc = p;
+
+        if (p->current_thread != 0) {
+          for (struct thread* t = p->threads; t < &p->threads[MAX_THREAD]; t++)
+          {
+            printf("state:%d\n", t->state);
+            if (t->state == THREAD_RUNNABLE) {
+              trapframe_to_context(&p->context, t->trapframe);
+              printf("%ld\n", t->trapframe->epc);
+              break;
+            }
+          }
+          printf("\n\n");
+        }
+
         swtch(&c->context, &p->context);
 
         // Process is done running for now.
@@ -570,6 +605,9 @@ sleep(void *chan, struct spinlock *lk)
   // Go to sleep.
   p->chan = chan;
   p->state = SLEEPING;
+  // if (p->current_thread != 0) {
+  //   p->threads[0].state = THREAD_JOINED;
+  // }
 
   sched();
 
@@ -910,5 +948,49 @@ int report_traps(struct report_traps* rp_traps)
   }
   rp_traps->count = index;
   
+  return 0;
+}
+
+
+int create_thread(uint64 func, uint64 args) {
+
+  struct proc* p = myproc();
+  if (p->last_thread_i >= MAX_THREAD) {
+    return -1;
+  }
+
+  if (p->current_thread == 0) {
+    struct trapframe* thread_tf = proc->trapframe;
+    struct thread my_thread;
+    my_thread.trapframe = thread_tf;
+    my_thread.id = 0;
+    my_thread.state = THREAD_RUNNABLE;
+    my_thread.join = 0;
+    p->threads[p->last_thread_i++] = my_thread;
+    my_thread.trapframe->sp = p->trapframe->sp;
+    my_thread.trapframe->ra = p->trapframe->ra;
+    my_thread.trapframe->epc = p->trapframe->epc;
+    printf("Main thread pc: %ld\n", p->trapframe->epc);
+    p->current_thread = &my_thread;
+    
+  }
+
+  struct trapframe* thread_tf = (struct trapframe *)kalloc();
+  struct thread my_thread;
+  my_thread.trapframe = thread_tf;
+  my_thread.id = 0;
+  my_thread.state = THREAD_RUNNABLE;
+  my_thread.join = 0;
+  p->threads[p->last_thread_i++] = my_thread;
+  
+  my_thread.trapframe->epc = func;
+
+  uint64 user_stack = PGROUNDUP(p->sz); // Align to page boundary
+  if (mappages(p->pagetable, user_stack, PGSIZE, (uint64)kalloc(), PTE_W | PTE_R | PTE_U) < 0) {
+    return -1;
+  }
+  my_thread.trapframe->sp = user_stack + PGSIZE; // Set user stack pointer
+  p->sz += PGSIZE; // Adjust process size
+
   return 0;
 }

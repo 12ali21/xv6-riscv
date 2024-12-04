@@ -1,0 +1,23 @@
+#include "kernel/types.h"
+#include "kernel/stat.h"
+#include "user/user.h"
+
+volatile int a = 0, b = 0, c = 0;
+
+void *my_thread(void *arg) {
+    printf("THREAD\n");
+    return 0;
+}
+
+
+
+int main(int argc, char const *argv[])
+{
+    printf("func addr: %ld args addr: %ld\n", (uint64) my_thread, (uint64) &a);
+    int ta = crthread((void *) my_thread, (void *) &a);
+    printf("MAIN THREAD\n");
+    sleep(10);
+    jointhread(ta);
+    
+    return 0;
+}
