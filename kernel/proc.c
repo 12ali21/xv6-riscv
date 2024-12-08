@@ -503,9 +503,8 @@ scheduler(void)
           {
             p->state = RUNNING;
             c->proc = p;
-
             struct thread t = p->threads[i];
-            printf("tid:%d, state:%d", t.id, t.state);
+            printf("i= %d ,tid:%d, state:%d\n",i, t.id, t.state);
             if (t.state == THREAD_RUNNABLE) {
               p->current_thread = &t;
               *p->trapframe = *p->current_thread->trapframe;
@@ -513,8 +512,9 @@ scheduler(void)
               printf("switching to %d\n", t.id);
               swtch(&c->context, &p->context);
               t.state = THREAD_RUNNABLE;
+              printf("finished switching to %d\n", t.id);
             }
-            printf("finished switching to %d\n", t.id);
+            p->state = RUNNABLE;
           }
         }
         else {
@@ -522,6 +522,7 @@ scheduler(void)
         }
         
 
+        printf("hello\n");
         // Process is done running for now.
         // It should have changed its p->state before coming back.
         c->proc = 0;
@@ -981,6 +982,7 @@ int report_traps(struct report_traps* rp_traps)
 
 int create_thread(uint64 func, uint64 args, uint64 stack) {
 
+  printf("in kernel :%p\n", (void *) args);
   struct proc* p = myproc();
   if (p->last_thread_i >= MAX_THREAD) {
     return -1;

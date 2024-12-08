@@ -5,10 +5,10 @@
 volatile int a = 0, b = 1, c = 2;
 
 void *my_thread(void *arg) {
-    int num = *(int *) arg;
+    // int *num = (int *) arg;
     // int i = 0;
     while(1) {
-        printf("In thread with %d\n", num);
+        printf("In thread with %p\n", arg);
     }
 
     // int *number = arg;
@@ -32,6 +32,7 @@ void *my_thread(void *arg) {
 int main(int argc, char const *argv[])
 {
     void *stack = malloc(4096);
+    printf("MAIN %p\n", &a);
     int ta = crthread((void *) my_thread, (void *) &a, stack);
     // stack = malloc(4096);
     // int tb = crthread((void *) my_thread, (void *) &b, stack);
