@@ -2,19 +2,15 @@
 #include "kernel/stat.h"
 #include "user/user.h"
 
-volatile int a = 0, b = 0, c = 0;
-
-void fa() {
-    printf("hadsf");
-}
-
-
-void fb() {
-    printf("hfadsf");
-}
+volatile int a = 0, b = 1, c = 2;
 
 void *my_thread(void *arg) {
-    printf("HHH\n");
+    int num = *(int *) arg;
+    // int i = 0;
+    while(1) {
+        printf("In thread with %d\n", num);
+    }
+
     // int *number = arg;
     // for (int i = 0; i < 100; ++i) {
     //     (*number)++;
@@ -35,18 +31,25 @@ void *my_thread(void *arg) {
 
 int main(int argc, char const *argv[])
 {
-    printf("func addr: %ld\n", (uint64) fa);
-    printf("func addr: %ld\n", (uint64) fb);
-    printf("func addr: %ld\n", (uint64) my_thread);
-    printf("func addr: %ld\n", (uint64) fa);
-    printf("func addr: %ld\n", (uint64) fb);
-    printf("func addr: %ld\n", (uint64) my_thread);
-    int ta = crthread((void *) my_thread, (void *) &a);
-    printf("%d\n", ta);
+    void *stack = malloc(4096);
+    int ta = crthread((void *) my_thread, (void *) &a, stack);
+    // stack = malloc(4096);
+    // int tb = crthread((void *) my_thread, (void *) &b, stack);
+    // stack = malloc(4096);
+    // int tc = crthread((void *) my_thread, (void *) &c, stack);
+    // printf("%d\n", ta);
     // printf("MAIN\n");
+    jointhread(ta);
+    // jointhread(tb);
+    // jointhread(tc);
     // // int tb = crthread(my_thread, (void *) &b);
     // // int tc = crthread(my_thread, (void *) &c);
-    sleep(1);
+    // sleep(1);
+    // printf("MAIN After sleep\n");
+
+    while(1) {
+        printf("In Main\n");
+    }
     // jointhread(ta);
     // // jointhread(tb);
     // // jointhread(tc);

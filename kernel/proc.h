@@ -1,4 +1,5 @@
 #define MAX_THREAD 4
+#define STACK_SIZE 4096
 
 // Saved registers for kernel context switches.
 struct context {

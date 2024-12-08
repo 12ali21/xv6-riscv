@@ -26,7 +26,7 @@ int sleep(int);
 int uptime(void);
 int childproc(struct child_processes*);
 int rptraps(struct report_traps*);
-int crthread(void*, void*);
+int crthread(void*, void*, void*);
 int jointhread(int);
 int stpthread(int);
 

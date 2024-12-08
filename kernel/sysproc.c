@@ -125,15 +125,17 @@ uint64
 sys_crthread(void) {
   uint64 funcaddr;
   uint64 argsaddr;
+  uint64 stack;
   // void (*func)();
 
   argaddr(0, &funcaddr);
+  argaddr(1, &argsaddr);
+  argaddr(2, &stack);
+  // printf("STACK: %ld", stack);
   // func = (void (*)()) funcaddr;
   // (*func)();
 
-  argaddr(1, &argsaddr);
-  printf("In create thread func addr: %ld args addr: %ld", funcaddr, argsaddr);
-  create_thread(funcaddr, argsaddr);
+  create_thread(funcaddr, argsaddr, stack);
 
   return 0;
 }
